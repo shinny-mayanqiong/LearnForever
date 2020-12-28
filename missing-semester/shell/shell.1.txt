@@ -1,0 +1,33 @@
+有一件事情是您必须作为根用户才能做的，那就是向 sysfs 文件写入内容。系统被挂载在 /sys 下，sysfs 文件则暴露了一些内核（kernel）参数。 因此，您不需要借助任何专用的工具，就可以轻松地在运行期间配置系统内核。
+
+|、>、和 < 是通过 shell 执行的，而不是被各个程序单独执行。 echo 等程序并不知道 | 的存在，它们只知道从自己的输入输出流中进行读写。
+
+
+touch semester   # 创建文件
+echo '#!/bin/sh' > semester  # 输入到文件
+echo 'curl --head --silent https://missing.csail.mit.edu' | tee -a semester  # 输入追加一行到文件
+chmod 755 semester  # 增加文件执行权限
+stat semester  # 查看文件状态
+./semester  # 执行文件
+
+# 将文件执行结果中的 last-modified 字段中的日期值写在 last-modified.txt 文件中, 以下效果相同
+./semester | grep last-modified | cut -d ' ' -f2,3,4,5,6,7 > last-modified.txt  
+./semester | grep last-modified | cut -d ' ' -f 2-7 > last-modified.txt
+./semester | grep last-modified | cut -c 16-44 > last-modified.txt
+
+date
+echo
+pwd
+cd
+which
+ls -l
+mv
+cp
+mkdir
+| < >
+
+find
+tee
+sudo
+
+

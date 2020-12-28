@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+
+# 变量赋值语法
+foo=bar
+
+# 访问变量
+$foo
+
+# 字符串 
+# ' 原义字符串，其中的变量不会转义
+# " 会替换变量值
+echo "$foo"  # bar
+echo '$foo'  # $foo
+
+# 控制流关键字 if case while for
+
+# 函数示例, 创建文件夹并进入
+mcd () {
+    mkdir -p "$1"
+    cd "$1"
+}
+
+# bash 中使用特殊变量表示参数、错误代码、相关变量
+# $0 脚本名
+# $1 ~ $9 脚本参数
+# $@ 所有参数
+# $# 参数个数
+# $? 前一个命令的返回值
+# $$ 当前脚本的进程识别码
+# !! 完整的上一条命令，包括参数（当因为权限不足执行命令失败时，可以使用 `sudo !!` 再尝试一次）
+# $_ 上一条命令的最后一个参数，交互式 shell 可以通过按下 Esc 之后键入 `.` 来获取
+
+# 命令通常使用 `STDOUT` 返回输出值；`STDERR` 返回错误及错误码
+# 返回 0 表示正常退出，非0 表示有错误发生
+
+# 退出码可以搭配 && 和 || 进行条件判断，决定是否执行其他程序。
+# 同一行多个命令可以用 ; 分隔，程序 true 返回 0，程序 false 返回 1。
+
+false || echo "Oops, fail"
+true || echo "Will not be printed"
+true && echo "Things went well"
+false && echo "Will not be printed"
+fasle ; echo "This will always run"
+
+# 以变量形式获取一个命令的输出，命令替换 (command substitution)
+# 例如 for file in $(ls) ，shell 先调用 ls ，然后遍历返回值。
+
+# 类似特性 进程替换 (process substitution)
+# <(CMD) 会执行 CMD 并将结果输出到一个临时文件，将 <(CMD) 替换为临时文件名。
+# 使用在我们希望返回值通过文件而不是 STDIN 传递
+# 例如 diff <(ls foo) <(ls bar) ，显示文件夹 foo 和 bar 中的区别
+
+# 比较操作符 https://man7.org/linux/man-pages/man1/test.1.html
+# 在 bash 中进行比较尽量使用 [[]] 而不是 [], 可以降低犯错概率，但是不兼容 sh
+
+# 通配 globbing
+# 通配符 ? 一个字符；* 任意字符
+# {} 展开命令。批量移动或者转换文件。
+
+mv *{.py,.sh} folder  # 移动所有 .py 和 .sh 文件
+touch {foo,bar}/{a..h}  # 下面命令会创建foo/a, foo/b, ... foo/h, bar/a, bar/b, ... bar/h这些文件
+
+# shellcheck 可以帮助定位 bash 脚本中的错误  https://github.com/koalaman/shellcheck
+
+# 除了用 bash ，用其他语言也可以写脚本，例如 python
+
+# shell functions 和 shell scripts 不同点：
+# - 函数只能用与 shell 使用相同的语言，脚本可以使用任意语言。因此要在脚本中包含 shebang
+# - 函数仅在定义时被加载，脚本会在每次被执行时加载。所以函数的加载比脚本快，每次修改函数的定义会重新加载一次
+# - 函数在当前 shell 环境执行；脚本在单独进程执行。因此函数可以修改环境变量，比如改变当前工作目录，脚本不可以。
+#   脚本需要使用 export 将环境变量导出，并将值传递给环境变量。
+# - 与其他程序语言一样，函数可以提高代码模块性、代码复用性并创建清晰性的结构。shell 脚本中往往也会包含它们自己的函数定义
+
+######## shell 如何查看帮助
+# man rm
+# 帮助手册内容太过翔实，可以使用 TLDR pages
+
+######## FIND 查找文件
+# 例如：
+# 查找所有名称为src的文件夹
+find . -name src -type d
+# 查找所有文件夹路径中包含test的python文件
+find . -path '**/test/**/*.py' -type f
+# 查找前一天修改的所有文件
+find . -mtime -1
+# 查找所有大小在500k至10M的tar.gz文件
+find . -size +500k -size -10M -name '*.tar.gz'
+
+# Delete all files with .tmp extension
+find . -name '*.tmp' -exec rm {} \;
+# Find all PNG files and convert them to JPG
+find . -name '*.png' -exec convert {} {}.jpg \;
+
+# find 语法难以记忆，可以设置 alias 简化操作。
+# fd 是 find 的一个替代品。更简单、快速、友好。
+
+# 不要每次搜索文件而是通过编译索引或建立数据库实现快速搜索。
+# locate 
+# locate 使用一个由 updatedb 负责更新的数据库，在大多数系统中 updatedb 都会通过 cron 每日更新。这便需要我们在速度和时效性之间作出权衡。
+# 而且，find 和类似的工具可以通过别的属性比如文件大小、修改时间或是权限来查找文件，locate 则只能通过文件名。
+
+####### 查找代码
+# grep 命令
+# 参数举例 -C 获取上下文；-v 反选结果；-R 递归进入子目录并搜索所有文本文件
+
+# grep 替代品  ack , ag, rg
+# 例如 ripgrep (rg)
+# 查找所有使用了 requests 库的文件
+rg -t py 'import requests'
+# 查找所有没有写 shebang 的文件（包含隐藏文件）
+rg -u --files-without-match "^#!"
+# 查找所有的foo字符串，并打印其之后的5行
+rg foo -A 5
+# 打印匹配的统计信息（匹配的行和文件的数量）
+rg --stats PATTERN
+
+######### 查找 shell 命令
+# 向上键
+# history 访问 shell 中输入的历史命令
+history | grep find   # 会打印包含 find 子串的命令
+
+# `Ctrl+R` 对命令历史记录进行回溯搜索。敲 Ctrl+R 后您可以输入子串来进行匹配，查找历史命令行
+# 然后多次按下 `Ctrl+R` 就可以在搜索结果中循环
+
+# Ctrl+R 可以配合 fzf 使用。
+# fzf 是一个通用对模糊查找工具，它可以和很多命令一起使用。这里我们可以对历史命令进行模糊查找并将结果以赏心悦目的格式输出。
+
+######### 文件夹导航
+# 使用 fasd 可以查找最常用和 / 或最近使用的文件和目录。
+# Fasd 基于 frecency 对文件和文件排序，也就是说它会同时针对频率（frequency ）和时效（ recency）进行排序。
+
+# 最直接对用法是自动跳转 （autojump），对于经常访问的目录，在目录名子串前加入一个命令 z 就可以快速切换命令到该目录。
+# 例如，如果您经常访问/home/user/files/cool_project 目录，那么可以直接使用 z cool 跳转到该目录。
+
+# 一些更复杂的工具可以用来概览目录结构，例如 tree, broot 
+# 更加完整对文件管理器，例如 nnn 或 ranger。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
